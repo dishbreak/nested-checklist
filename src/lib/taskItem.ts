@@ -3,7 +3,17 @@ export interface TaskItemInput {
     children?: TaskItemInput[]
 }
 
+
+const getId: () => number = (() => {
+    let count = 0
+    return (): number => {
+        count++
+        return count
+    }
+})()
+
 export class TaskItem {
+    id: number = 0
     name: string = ""
     children: TaskItem[] = []
     checked: boolean = false
@@ -11,12 +21,23 @@ export class TaskItem {
 
     static fromInput(i: TaskItemInput, parent?: TaskItem): TaskItem {
         const t = new TaskItem()
+        t.id = getId()
         t.name = i.name
         if (parent !== undefined) {
             t.parent = parent
         }
         t.children = i.children?.map(c => TaskItem.fromInput(c)) ?? []
         return t
+    }
+
+    clone(): TaskItem {
+        const c = new TaskItem()
+        c.checked = this.checked
+        c.name = this.name
+        c.id = this.id
+        c.parent = this.parent
+        c.children = this.children.map(n => n.clone())
+        return c
     }
 
     allChildren(callback: (t: TaskItem) => boolean, includeSelf: boolean = false): boolean {
