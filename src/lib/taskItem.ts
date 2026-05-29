@@ -1,5 +1,6 @@
 export interface TaskItemInput {
     name: string;
+    id?: number
     children?: TaskItemInput[]
 }
 
@@ -12,7 +13,6 @@ const getId: () => number = (() => {
     }
 })()
 
-
 export class TaskItem {
     id: number = 0
     name: string = ""
@@ -22,7 +22,7 @@ export class TaskItem {
 
     static fromInput(i: TaskItemInput, parent?: TaskItem): TaskItem {
         const t = new TaskItem()
-        t.id = getId()
+        t.id = i.id ?? getId()
         t.name = i.name
         t.parent = parent ?? t.parent
         t.children = i.children?.map(c => TaskItem.fromInput(c, t)) ?? []
@@ -47,7 +47,7 @@ export class TaskItem {
                 i.parent?.children.push(i)
             }
         })
-        
+
         // return only the items with no parent.
         return t.filter(n => n.parent === undefined)
     }
@@ -97,15 +97,16 @@ export interface FlattenedTaskItem {
     parentId?: number
     name: string
     id: number
-    checked:boolean
+    checked: boolean
 }
 
-export function flatten(taskItems: TaskItem[], depth: number = 0, parentId?:number): FlattenedTaskItem[] {
+export function flatten(taskItems: TaskItem[], depth: number = 0, parentId?: number): FlattenedTaskItem[] {
     return taskItems.reduce<FlattenedTaskItem[]>((acc, item, index) => {
+        const { id, checked, name } = item
         return [
             ...acc,
-            {...item, parentId, depth, index},
-            ...flatten(item.children, depth=depth+1, parentId=item.id)
+            { id, checked, name, parentId, depth, index },
+            ...flatten(item.children, depth + 1, item.id)
         ]
     }, [])
 }
@@ -128,10 +129,10 @@ export function getDragProjection(items: FlattenedTaskItem[], projectedDepth: nu
     }
 
     const targetItem = items[targetItemIdx]
-    const previousItemDepth = items[targetItemIdx-1]?.depth ?? 0
+    const previousItemDepth = items[targetItemIdx - 1]?.depth ?? 0
     const maxDepth = Math.min(previousItemDepth, targetItem.depth) + 1
     const minDepth = items[targetItemIdx + 1]?.depth ?? 0
-    
+
     let depth = projectedDepth
     if (depth >= maxDepth) {
         depth = maxDepth
@@ -147,7 +148,7 @@ export function getDragProjection(items: FlattenedTaskItem[], projectedDepth: nu
             }
 
             if (depth >= previousItemDepth) {
-                return items[targetItemIdx-1]?.id
+                return items[targetItemIdx - 1]?.id
             }
 
             return items
@@ -160,7 +161,7 @@ export function getDragProjection(items: FlattenedTaskItem[], projectedDepth: nu
 }
 
 export function getDescendants(items: FlattenedTaskItem[], id: number): Set<FlattenedTaskItem> {
-    return items.filter(({parentId}) => parentId === id)
+    return items.filter(({ parentId }) => parentId === id)
         .reduce((acc, child) => {
             return new Set([
                 ...acc,
