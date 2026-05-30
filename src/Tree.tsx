@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { flatten, getDescendants, getDragDepth, getDragProjection, TaskItem, type FlattenedTaskItem } from "./lib/taskItem";
+import { checkAncestors, flatten, getDescendants, getDragDepth, getDragProjection, TaskItem, update, type FlattenedTaskItem } from "./lib/taskItem";
 import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
 import { TreeItem } from "./TreeItem";
 import { TreeItemOverlay } from "./TreeItemOverlay";
@@ -16,6 +16,15 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
     const [flattenedItems, setFlattenedItems] = useState<FlattenedTaskItem[]>(() => flatten(items))
     const initialDepth = useRef<number>(0)
     const sourceChildren = useRef<FlattenedTaskItem[]>([])
+
+    const onChecked = (item: FlattenedTaskItem, value: boolean): void => {
+        setFlattenedItems((flattenedItems) => {
+            const results = flattenedItems.map(i => structuredClone(i))
+            update(results, item.id, value)
+            checkAncestors(results, item.id)
+            return results
+        })
+    }
 
     return <DragDropProvider
         onDragStart={(event) => {
@@ -96,14 +105,18 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
             }
 
             if (source.data!.depth !== depth || source.data!.parentId !== parentId) {
-                setFlattenedItems((flattenedItems) =>
-                    flattenedItems.map(it => it.id === source.id ? { ...it, depth, parentId } : it))
+                setFlattenedItems((flattenedItems) => {
+                    // if we're moving the item, uncheck it.
+                    const result = flattenedItems.map(it => it.id === source.id ? { ...it, depth, parentId, checked: false } : it)
+                    checkAncestors(result, source.id as number)
+                    return result
+                })
             }
         }}
     >
         <ul>
             {flattenedItems.map((item, index) => {
-                return <TreeItem key={item.id} item={item} index={index} />
+                return <TreeItem key={item.id} item={item} index={index} onChecked={onChecked}/>
             })}
         </ul>
         <DragOverlay>

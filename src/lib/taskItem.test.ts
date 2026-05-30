@@ -61,3 +61,4 @@ test('flatten will correctly represent the input', ({ input }) => {
         { id: 6, name: "bah", checked: false, index: 0, depth: 2, parentId: 5 }
     ])
 })
+

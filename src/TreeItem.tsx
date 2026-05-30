@@ -15,7 +15,12 @@ const config = {
     },
 } as const;
 
-export function TreeItem({ item, index }: { item: FlattenedTaskItem, index: number }): React.JSX.Element {
+export interface Props {
+    item: FlattenedTaskItem
+    index: number
+    onChecked: (item: FlattenedTaskItem, value: boolean) => void
+}
+export function TreeItem({ item, index, onChecked }: Props): React.JSX.Element {
     const { id, depth, parentId, name } = item
     const { ref, handleRef, isDragSource } = useSortable({
         ...config,
@@ -43,6 +48,7 @@ export function TreeItem({ item, index }: { item: FlattenedTaskItem, index: numb
             <span className="group-aria-hidden/row:invisible">
                 <Handle ref={handleRef} />
             </span>
+            <input type="checkbox" checked={item.checked} onChange={e => onChecked(item, e.target.checked)} />
             {name}
         </li>
     )

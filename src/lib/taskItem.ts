@@ -170,3 +170,24 @@ export function getDescendants(items: FlattenedTaskItem[], id: number): Set<Flat
             ])
         }, new Set<FlattenedTaskItem>())
 }
+
+export function update(items: FlattenedTaskItem[], id: number, value: boolean): void {
+    const item = items.find(i => i.id === id)
+    if (!item) {
+        return;
+    }
+    item.checked = value
+    items.filter(i => i.parentId === id).forEach(
+        i => update(items, i.id, value)
+    )
+}
+
+export function checkAncestors(items: FlattenedTaskItem[], id: number): void {
+    const item = items.find(i => i.id === id)
+    if (!item) return;
+    const parentId = item.parentId
+    if (parentId === undefined) return;
+    const parent = items.find(i => i.id === parentId)!
+    parent.checked = items.filter(i => i.parentId === parentId).every(i => i.checked)
+    checkAncestors(items, parentId)
+}
