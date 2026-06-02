@@ -1,5 +1,5 @@
 import { expect, test as baseTest } from 'vitest'
-import { flatten, TaskItem, type FlattenedTaskItem, type TaskItemInput } from './taskItem'
+import { flatten, TaskItem, type TaskItemInput } from './taskItem'
 
 const test = baseTest.extend('input', (): TaskItemInput[] => [
     {
@@ -61,4 +61,3 @@ test('flatten will correctly represent the input', ({ input }) => {
         { id: 6, name: "bah", checked: false, index: 0, depth: 2, parentId: 5 }
     ])
 })
-
