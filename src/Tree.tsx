@@ -26,6 +26,43 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
         })
     }
 
+    const onEditCancel = (item: FlattenedTaskItem) => {
+        setFlattenedItems((flattenedItems) => {
+            return flattenedItems.map(i => {
+                const j = structuredClone(i)
+                if (j.id === item.id) {
+                    j.editing = false
+                }
+                return j
+            })
+        })
+    }
+
+    const onEditStart = (item: FlattenedTaskItem) => {
+        setFlattenedItems(flattenedItems => {
+            return flattenedItems.map(i => {
+                const j = structuredClone(i)
+                if (j.id === item.id) {
+                    j.editing = true
+                }
+                return j
+            })
+        })
+    }
+
+    const onEditFinish = (item: FlattenedTaskItem, value: string) => {
+        setFlattenedItems(flattenedItems => {
+            return flattenedItems.map(i => {
+                const j = structuredClone(i)
+                if (j.id === item.id) {
+                    j.name = value
+                    j.editing = false
+                }
+                return j
+            })
+        })
+    }
+
     return <DragDropProvider
         onDragStart={(event) => {
             const { source } = event.operation
@@ -116,7 +153,7 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
     >
         <ul>
             {flattenedItems.map((item, index) => {
-                return <TreeItem key={item.id} item={item} index={index} onChecked={onChecked}/>
+                return <TreeItem key={item.id} item={item} index={index} onChecked={onChecked} onEditStart={onEditStart} onEditFinish={onEditFinish} onEditCancel={onEditCancel}/>
             })}
         </ul>
         <DragOverlay>

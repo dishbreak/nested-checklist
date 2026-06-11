@@ -1,7 +1,7 @@
 import type React from "react";
 import type { FlattenedTaskItem } from "./lib/taskItem";
 import { useSortable } from "@dnd-kit/react/sortable";
-import { forwardRef } from "react";
+import { forwardRef, useRef } from "react";
 
 const INDENTATION = 50;
 
@@ -19,8 +19,11 @@ export interface Props {
     item: FlattenedTaskItem
     index: number
     onChecked: (item: FlattenedTaskItem, value: boolean) => void
+    onEditStart: (item: FlattenedTaskItem) => void
+    onEditCancel: (iten: FlattenedTaskItem) => void
+    onEditFinish: (item: FlattenedTaskItem, value: string) => void
 }
-export function TreeItem({ item, index, onChecked }: Props): React.JSX.Element {
+export function TreeItem({ item, index, onChecked, onEditStart, onEditCancel, onEditFinish }: Props): React.JSX.Element {
     const { id, depth, parentId, name } = item
     const { ref, handleRef, isDragSource } = useSortable({
         ...config,
@@ -32,6 +35,8 @@ export function TreeItem({ item, index, onChecked }: Props): React.JSX.Element {
             parentId,
         },
     })
+
+    const editRef = useRef<HTMLInputElement>(null)
 
     return (
         <li
@@ -49,7 +54,22 @@ export function TreeItem({ item, index, onChecked }: Props): React.JSX.Element {
                 <Handle ref={handleRef} />
             </span>
             <input type="checkbox" checked={item.checked} onChange={e => onChecked(item, e.target.checked)} />
-            {name}
+            {
+                item.editing ?
+                    <input type="text" id={`task-id-${item.id}`} className="grow" defaultValue={item.name} ref={editRef}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                onEditFinish(item, editRef.current!.value)
+                            } else if (e.key === "Escape") {
+                                onEditCancel(item)
+                            }
+                        }}
+                        onBlur={() => {
+                            onEditCancel(item)
+                        }}
+                    /> :
+                    <div className="grow hover:bg-[#dedede]" onClick={() => onEditStart(item)}>{name}</div>
+            }
         </li>
     )
 }
