@@ -25,8 +25,9 @@ export interface Props {
     onEditFinish: (item: FlattenedTaskItem, value: string) => void
     onAddSibling: (item: FlattenedTaskItem) => void
     onAddChild: (item: FlattenedTaskItem) => void
+    focused: boolean
 }
-export function TreeItem({ item, index, onChecked, onEditStart, onEditCancel, onEditFinish }: Props): React.JSX.Element {
+export function TreeItem({ item, index, onChecked, onEditStart, onEditCancel, onEditFinish, focused }: Props): React.JSX.Element {
     const { id, depth, parentId, name } = item
     const { ref, handleRef, isDragSource } = useSortable({
         ...config,
@@ -46,7 +47,7 @@ export function TreeItem({ item, index, onChecked, onEditStart, onEditCancel, on
             ref={ref}
             className={[
                 'relative flex items-center gap-2.5 px-2.5 py-2.5',
-                item.focused ? 'bg-blue-300' : 'bg-white',
+                focused ? 'bg-blue-300' : 'bg-white',
                 ' border border-[#dedede] -mb-px text-[#222]',
                 'rounded-md',
                 'aria-hidden:opacity-40',
@@ -61,7 +62,7 @@ export function TreeItem({ item, index, onChecked, onEditStart, onEditCancel, on
             <input type="checkbox" checked={item.checked} onChange={e => onChecked(item, e.target.checked)} />
             {
                 item.editing ?
-                    <input type="text" id={`task-id-${item.id}`} className="grow group-aria-hidden/row:invisible" defaultValue={item.name} ref={editRef}
+                    <input type="text" id={`task-id-${item.id}`} className="grow bg-white" autoFocus={true} defaultValue={item.name} ref={editRef}
                         onKeyDown={(e) => {
                             if (e.key === "Enter") {
                                 onEditFinish(item, editRef.current!.value)
