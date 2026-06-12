@@ -20,6 +20,7 @@ export class TaskItem {
     checked: boolean = false
     parent?: TaskItem
     editing: boolean = false
+    focused: boolean = false
 
     static fromInput(i: TaskItemInput, parent?: TaskItem): TaskItem {
         const t = new TaskItem()
@@ -38,6 +39,7 @@ export class TaskItem {
             i.checked = n.checked
             i.name = n.name
             i.editing = n.editing
+            i.focused = n.focused
             nodeMap.set(i.id, i)
             return i
         })
@@ -101,14 +103,15 @@ export interface FlattenedTaskItem {
     id: number
     checked: boolean
     editing: boolean
+    focused: boolean
 }
 
 export function flatten(taskItems: TaskItem[], depth: number = 0, parentId?: number): FlattenedTaskItem[] {
     return taskItems.reduce<FlattenedTaskItem[]>((acc, item, index) => {
-        const { id, checked, name, editing } = item
+        const { id, checked, name, editing, focused } = item
         return [
             ...acc,
-            { id, checked, name, parentId, depth, index, editing },
+            { id, checked, name, parentId, depth, index, editing, focused },
             ...flatten(item.children, depth + 1, item.id)
         ]
     }, [])

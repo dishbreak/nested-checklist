@@ -2,6 +2,7 @@ import type React from "react";
 import type { FlattenedTaskItem } from "./lib/taskItem";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { forwardRef, useRef } from "react";
+import { PlusCircleIcon, ArrowDownOnSquareStackIcon } from "@heroicons/react/24/solid";
 
 const INDENTATION = 50;
 
@@ -22,6 +23,8 @@ export interface Props {
     onEditStart: (item: FlattenedTaskItem) => void
     onEditCancel: (iten: FlattenedTaskItem) => void
     onEditFinish: (item: FlattenedTaskItem, value: string) => void
+    onAddSibling: (item: FlattenedTaskItem) => void
+    onAddChild: (item: FlattenedTaskItem) => void
 }
 export function TreeItem({ item, index, onChecked, onEditStart, onEditCancel, onEditFinish }: Props): React.JSX.Element {
     const { id, depth, parentId, name } = item
@@ -43,20 +46,22 @@ export function TreeItem({ item, index, onChecked, onEditStart, onEditCancel, on
             ref={ref}
             className={[
                 'relative flex items-center gap-2.5 px-2.5 py-2.5',
-                'bg-white border border-[#dedede] -mb-px text-[#222]',
+                item.focused ? 'bg-blue-300' : 'bg-white',
+                ' border border-[#dedede] -mb-px text-[#222]',
                 'rounded-md',
-                'aria-hidden:opacity-40'
+                'aria-hidden:opacity-40',
+                'group',
             ].join(' ')}
             style={{ marginLeft: depth * INDENTATION }}
             aria-hidden={isDragSource}
         >
-            <span className="group-aria-hidden/row:invisible">
+            <span className="group-ara-hidden/row:invisible">
                 <Handle ref={handleRef} />
             </span>
             <input type="checkbox" checked={item.checked} onChange={e => onChecked(item, e.target.checked)} />
             {
                 item.editing ?
-                    <input type="text" id={`task-id-${item.id}`} className="grow" defaultValue={item.name} ref={editRef}
+                    <input type="text" id={`task-id-${item.id}`} className="grow group-aria-hidden/row:invisible" defaultValue={item.name} ref={editRef}
                         onKeyDown={(e) => {
                             if (e.key === "Enter") {
                                 onEditFinish(item, editRef.current!.value)
@@ -70,13 +75,33 @@ export function TreeItem({ item, index, onChecked, onEditStart, onEditCancel, on
                     /> :
                     <div className="grow hover:bg-[#dedede]" onClick={() => onEditStart(item)}>{name}</div>
             }
-        </li>
+            <span className="group-aria-hidden/row:invisible flex group-hover:visible invisible">
+                <button className={[
+                    "flex w-5 items-center justify-center group"
+                ].join(" ")}>
+                    <PlusCircleIcon className={
+                        [
+                            "group-hover:text-stone-400",
+                            "group-active:text-stone-700",
+                        ].join(" ")
+                    } />
+                </button>
+                <button className="flex w-5 items-center justify-center group">
+                    <ArrowDownOnSquareStackIcon className={
+                        [
+                            "group-hover:text-stone-400",
+                            "group-active:text-stone-700",
+                        ].join(" ")
+                    } />
+                </button>
+            </span>
+        </li >
     )
 }
 
 interface HandleProps extends React.HTMLAttributes<HTMLButtonElement> { }
 
-const Handle = forwardRef<HTMLButtonElement, HandleProps>(
+export const Handle = forwardRef<HTMLButtonElement, HandleProps>(
     ({ className, ...props }, ref) => {
         return (
             <button
@@ -84,7 +109,7 @@ const Handle = forwardRef<HTMLButtonElement, HandleProps>(
                 aria-label="Drag Handle"
                 className={[
                     className,
-                    'flex w-3, p-3.75 items-center justify-center flex-none',
+                    'flex w-3 p-3.75 items-center justify-center flex-none',
                     'touch-none cursor-grab rounded-[5px] border-none outline-none',
                     'appearance-none bg-transparent select-none',
                     '[-webkit-tap-highlight-color:transparent]',

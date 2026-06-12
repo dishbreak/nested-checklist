@@ -5,6 +5,7 @@ import { TreeItem } from "./TreeItem";
 import { TreeItemOverlay } from "./TreeItemOverlay";
 import { move } from "@dnd-kit/helpers";
 import { isKeyboardEvent } from "@dnd-kit/utilities";
+import { useHotkeys } from "react-hotkeys-hook";
 
 export interface Props {
     items: TaskItem[]
@@ -16,12 +17,46 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
     const [flattenedItems, setFlattenedItems] = useState<FlattenedTaskItem[]>(() => flatten(items))
     const initialDepth = useRef<number>(0)
     const sourceChildren = useRef<FlattenedTaskItem[]>([])
+    const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
+
+    useHotkeys('k', () => {
+        if (focusedIndex === null) {
+            setFocusedIndex(0)
+            return
+        }
+
+        setFocusedIndex((focusedIndex + 1) % flattenedItems.length)
+    })
+
+    useHotkeys('j', () => {
+        if (focusedIndex === null || focusedIndex === 0) {
+            setFocusedIndex(flattenedItems.length - 1)
+            return
+        }
+        setFocusedIndex(focusedIndex - 1)
+    })
+
+    useHotkeys('e', () => {
+        if (focusedIndex === null) {
+            return
+        }
+        setFlattenedItems((flattenedItems) => {
+            return flattenedItems.map((i, idx) => {
+                const j = structuredClone(i)
+                if (idx === focusedIndex) {
+                    j.editing = true
+                }
+                return j
+            })
+        })
+    })
 
     const onChecked = (item: FlattenedTaskItem, value: boolean): void => {
         setFlattenedItems((flattenedItems) => {
             const results = flattenedItems.map(i => structuredClone(i))
             update(results, item.id, value)
             checkAncestors(results, item.id)
+            onChange(TaskItem.fromFlattenedItem(results))
             return results
         })
     }
@@ -52,7 +87,7 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
 
     const onEditFinish = (item: FlattenedTaskItem, value: string) => {
         setFlattenedItems(flattenedItems => {
-            return flattenedItems.map(i => {
+            const results = flattenedItems.map(i => {
                 const j = structuredClone(i)
                 if (j.id === item.id) {
                     j.name = value
@@ -60,6 +95,9 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
                 }
                 return j
             })
+            // propagate the changed value back to the parent via the onChange() callback.
+            onChange(TaskItem.fromFlattenedItem(results))
+            return results
         })
     }
 
@@ -153,7 +191,7 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
     >
         <ul>
             {flattenedItems.map((item, index) => {
-                return <TreeItem key={item.id} item={item} index={index} onChecked={onChecked} onEditStart={onEditStart} onEditFinish={onEditFinish} onEditCancel={onEditCancel}/>
+                return <TreeItem key={item.id} item={item} index={index} onChecked={onChecked} onEditStart={onEditStart} onEditFinish={onEditFinish} onEditCancel={onEditCancel} />
             })}
         </ul>
         <DragOverlay>
