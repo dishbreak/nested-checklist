@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { checkAncestors, flatten, getDescendants, getDragDepth, getDragProjection, TaskItem, update, type FlattenedTaskItem } from "./lib/taskItem";
+import { checkAncestors, flatten, getDescendants, getDragDepth, getDragProjection, insertChild, insertSibling, TaskItem, update, type FlattenedTaskItem, type InsertOperation } from "./lib/taskItem";
 import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
 import { TreeItem } from "./TreeItem";
 import { TreeItemOverlay } from "./TreeItemOverlay";
@@ -12,6 +12,8 @@ export interface Props {
     indentation?: number
     onChange: (t: TaskItem[]) => void
 }
+
+type SetFlattenedItemsCallback = (flattenedTaskItems: FlattenedTaskItem[]) => FlattenedTaskItem[]
 
 export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.Element {
     const [flattenedItems, setFlattenedItems] = useState<FlattenedTaskItem[]>(() => flatten(items))
@@ -31,6 +33,36 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
             })
             return newVal
         }
+    }
+
+    const updateAddItem = (item: FlattenedTaskItem, op: InsertOperation): SetFlattenedItemsCallback => {
+        return (flattenedItems) => {
+            op(flattenedItems, item, {
+                name: "",
+                editing: true,
+                focused: true,
+                checked: false,
+            })
+
+            item.focused = false
+
+            // use a tree sort and flatten to put the item in the correct spot.
+            const tree = TaskItem.fromFlattenedItem(flattenedItems)
+            onChange(tree)
+            const newFlattenedItems = flatten(tree)
+            let newFocusedIndex: number | null = newFlattenedItems.findIndex(i => i.focused)
+            newFocusedIndex = newFocusedIndex === -1 ? null : newFocusedIndex
+            setFocusedIndex(newFocusedIndex)
+            return newFlattenedItems
+        }
+    }
+
+    const updateAddSibling = (item: FlattenedTaskItem): SetFlattenedItemsCallback => {
+        return updateAddItem(item, insertSibling)
+    }
+
+    const updateAddChild = (item: FlattenedTaskItem): SetFlattenedItemsCallback => {
+        return updateAddItem(item, insertChild)
     }
 
     useHotkeys('k', () => {
@@ -61,6 +93,26 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
                 return j
             })
         })
+    }, { keydown: false, keyup: true })
+
+    useHotkeys('i', () => {
+        if (focusedIndex === null) {
+            return
+        }
+        const sibling = flattenedItems[focusedIndex]
+        setFlattenedItems(
+            updateAddSibling(sibling)
+        )
+    }, { keydown: false, keyup: true })
+
+    useHotkeys('o', () => {
+        if (focusedIndex === null) {
+            return
+        }
+        const sibling = flattenedItems[focusedIndex]
+        setFlattenedItems(
+            updateAddChild(sibling)
+        )
     }, { keydown: false, keyup: true })
 
     const onChecked = (item: FlattenedTaskItem, value: boolean): void => {
@@ -207,7 +259,15 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
                     key={item.id} item={item} index={index}
                     onChecked={onChecked}
                     onEditStart={onEditStart} onEditFinish={onEditFinish} onEditCancel={onEditCancel}
-                    onAddChild={() => { }} onAddSibling={() => { }}
+                    onAddChild={(item) => {
+                        setFlattenedItems(
+                            updateAddChild(item)
+                        )
+                    }} onAddSibling={(item) => {
+                        setFlattenedItems(
+                            updateAddSibling(item)
+                        )
+                    }}
                     focused={index === focusedIndex} />
             })}
         </ul>

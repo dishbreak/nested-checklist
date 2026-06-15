@@ -5,11 +5,16 @@ export interface TaskItemInput {
 }
 
 
-const getId: () => number = (() => {
+export const { getId, __reset } = (() => {
     let count = -1 // ensures first ID is 0
-    return (): number => {
-        count++
-        return count
+    return {
+        getId: (): number => {
+            count++
+            return count
+        },
+        __reset: () => {
+            count = -1
+        }
     }
 })()
 
@@ -95,15 +100,18 @@ export class TaskItem {
 }
 
 // an alternative representation of a TaskItem that models the tree as a flat list
-export interface FlattenedTaskItem {
-    depth: number
-    index: number
+export interface FlattenedTaskItemProps {
     parentId?: number
     name: string
-    id: number
     checked: boolean
     editing: boolean
     focused: boolean
+}
+
+export interface FlattenedTaskItem extends FlattenedTaskItemProps {
+    id: number
+    depth: number
+    index: number
 }
 
 export function flatten(taskItems: TaskItem[], depth: number = 0, parentId?: number): FlattenedTaskItem[] {
@@ -196,4 +204,49 @@ export function checkAncestors(items: FlattenedTaskItem[], id: number): void {
     const parent = items.find(i => i.id === parentId)!
     parent.checked = items.filter(i => i.parentId === parentId).every(i => i.checked)
     checkAncestors(items, parentId)
+}
+
+export type InsertOperation = (items: FlattenedTaskItem[], anchor: FlattenedTaskItem, payload: FlattenedTaskItemProps) => void
+
+export function insertChild(items: FlattenedTaskItem[], parent: FlattenedTaskItem, payload: FlattenedTaskItemProps): void {
+    const children = items.filter(i => i.parentId === parent.id)
+    if (children.length === 0) {
+        // we'll reconstitute 
+        items.push({
+            ...payload,
+            id: getId(),
+            depth: parent.depth + 1,
+            index: 0,
+            parentId: parent.id,
+        })
+        return
+    }
+
+    // sort the children by index
+    children.sort((a, b) => a.index - b.index)
+
+    const highIndex = children[children.length - 1].index
+    items.push(
+        {
+            ...payload,
+            id: getId(),
+            depth: parent.depth + 1,
+            index: highIndex + 1,
+            parentId: parent.id,
+        }
+    )
+}
+
+export function insertSibling(items: FlattenedTaskItem[], sibling: FlattenedTaskItem, payload: FlattenedTaskItemProps): void {
+    const siblings = items.filter(i => i.parentId === sibling.parentId)
+    siblings.sort((a, b) => a.index - b.index)
+    const index = siblings[siblings.length - 1].index + 1
+    const { depth, parentId } = sibling
+    items.push({
+        ...payload,
+        id: getId(),
+        depth,
+        parentId,
+        index,
+    })
 }
