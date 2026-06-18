@@ -2,7 +2,7 @@ import type React from "react";
 import type { FlattenedTaskItem } from "./lib/taskItem";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { forwardRef, useRef } from "react";
-import { PlusCircleIcon, ArrowDownOnSquareStackIcon } from "@heroicons/react/24/solid";
+import { PlusCircleIcon, ArrowDownOnSquareStackIcon, TrashIcon } from "@heroicons/react/24/solid";
 
 const INDENTATION = 50;
 
@@ -25,9 +25,11 @@ export interface Props {
     onEditFinish: (item: FlattenedTaskItem, value: string) => void
     onAddSibling: (item: FlattenedTaskItem) => void
     onAddChild: (item: FlattenedTaskItem) => void
+    onDelete: (item: FlattenedTaskItem) => void
     focused: boolean
 }
-export function TreeItem({ item, index, onChecked, onEditStart, onEditCancel, onEditFinish, focused }: Props): React.JSX.Element {
+export function TreeItem({
+    item, index, onChecked, onEditStart, onEditCancel, onEditFinish, focused, onAddChild, onAddSibling, onDelete }: Props): React.JSX.Element {
     const { id, depth, parentId, name } = item
     const { ref, handleRef, isDragSource } = useSortable({
         ...config,
@@ -79,21 +81,28 @@ export function TreeItem({ item, index, onChecked, onEditStart, onEditCancel, on
             <span className="group-aria-hidden/row:invisible flex group-hover:visible invisible">
                 <button className={[
                     "flex w-5 items-center justify-center group"
-                ].join(" ")}>
+                ].join(" ")}
+                    onClick={() => onAddSibling(item)}>
                     <PlusCircleIcon className={
                         [
                             "group-hover:text-stone-400",
                             "group-active:text-stone-700",
                         ].join(" ")
-                    } />
+                    }
+                    />
                 </button>
-                <button className="flex w-5 items-center justify-center group">
+                <button className="flex w-5 items-center justify-center group"
+                    onClick={() => onAddChild(item)}>
                     <ArrowDownOnSquareStackIcon className={
                         [
                             "group-hover:text-stone-400",
                             "group-active:text-stone-700",
                         ].join(" ")
                     } />
+                </button>
+                <button className="flex w-5 items-center justify-center"
+                    onClick={() => onDelete(item)}>
+                        <TrashIcon />
                 </button>
             </span>
         </li >

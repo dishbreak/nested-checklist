@@ -1,5 +1,5 @@
 import { expect, test as baseTest, beforeEach, describe } from 'vitest'
-import { flatten, TaskItem, type TaskItemInput, type FlattenedTaskItem, __reset, insertChild, insertSibling } from './taskItem'
+import { flatten, TaskItem, type TaskItemInput, __reset, insertChild, insertSibling } from './taskItem'
 
 const test = baseTest.extend('input', (): TaskItemInput[] => [
     {
@@ -114,9 +114,9 @@ describe('the addChild function', () => {
 })
 
 describe('the insertSibling function', () => {
-    test('will add a top-level sibling', ({flattenedItems}) => {
+    test('will add a top-level sibling', ({ flattenedItems }) => {
         const anchor = flattenedItems[1]
-        insertSibling(flattenedItems, anchor, {name: "plonk", editing: false, focused: false, checked: false})
+        insertSibling(flattenedItems, anchor, { name: "plonk", editing: false, focused: false, checked: false })
         expect(flattenedItems).toStrictEqual([
             { editing: false, focused: false, id: 0, name: "foo", depth: 0, checked: false, index: 0, parentId: undefined },
             { editing: false, focused: false, id: 1, name: "bar", depth: 0, checked: false, index: 1, parentId: undefined },

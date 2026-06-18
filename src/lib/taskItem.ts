@@ -97,6 +97,33 @@ export class TaskItem {
         this.checked = value
         this.children.forEach(c => c.updateDescendants(value))
     }
+
+    find(callback: (t: TaskItem) => boolean): TaskItem | undefined {
+        if (callback(this)) {
+            return this
+        }
+
+        for (const c of this.children) {
+            const result = c.find(callback)
+            if (result !== undefined) {
+                return result
+            }
+        }
+        return undefined
+    }
+
+    delete(): void {
+        if (this.parent === undefined) {
+            return
+        }
+
+        const idx = this.parent.children.findIndex(c => c.id === this.id)
+        if (idx === -1) {
+            throw new Error("inconsistent tree -- could not find child in parent's children")
+        }
+
+        this.parent.children = this.parent.children.splice(idx, 1)
+    }
 }
 
 // an alternative representation of a TaskItem that models the tree as a flat list

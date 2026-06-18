@@ -115,6 +115,14 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
         )
     }, { keydown: false, keyup: true })
 
+    useHotkeys('shift + delete', () => {
+        if (focusedIndex === null) {
+            return
+        }
+        const targetItem = flattenedItems[focusedIndex]
+        setFlattenedItems(removeFlattenedItem(targetItem))
+    })
+
     const onChecked = (item: FlattenedTaskItem, value: boolean): void => {
         setFlattenedItems((flattenedItems) => {
             const results = flattenedItems.map(i => structuredClone(i))
@@ -165,6 +173,38 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
         })
     }
 
+    const removeFlattenedItem = (item: FlattenedTaskItem) => {
+        return (flattenedItems: FlattenedTaskItem[]) => {
+            const tree = TaskItem.fromFlattenedItem(flattenedItems)
+            const root = new TaskItem()
+            root.children = tree
+            const target = root.find(t => t.id === item.id)
+            if (target === undefined) {
+                console.log(`unable to delete item ${item.id} / ${item.name} -- not found in tree`)
+                return flattenedItems
+            }
+
+            target.delete()
+
+            return flatten(root.children)
+        }
+    }
+
+
+    const updateFlattenedItems = (newTree: TaskItem[]) => {
+        return (_flattenedItems: FlattenedTaskItem[]): FlattenedTaskItem[] => {
+            const flattenedItems = flatten(newTree)
+            const focusIndex = flattenedItems.findIndex(i => i.focused)
+            if (focusIndex === -1) {
+                setFocusedIndex(null)
+            } else {
+                setFocusedIndex(focusIndex)
+            }
+
+            return flattenedItems
+        }
+    }
+
     return <DragDropProvider
         onDragStart={(event) => {
             const { source } = event.operation
@@ -179,7 +219,14 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
                 // so we remove the children from the tree when its parent gets removed
                 const descendants = getDescendants(flattenedItems, id)
                 sourceChildren.current = [...descendants]
-                return flattenedItems.filter((it) => !descendants.has(it))
+                const updatedFlattenedItems = flattenedItems.filter((it) => !descendants.has(it))
+                const currentlyFocusedIndex = updatedFlattenedItems.findIndex(it => it.focused)
+                if (focusedIndex === -1) {
+                    setFocusedIndex(null)
+                } else {
+                    setFocusedIndex(currentlyFocusedIndex)
+                }
+                return updatedFlattenedItems
             })
         }}
         onDragEnd={(event) => {
@@ -192,7 +239,7 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
                 ...sourceChildren.current,
             ])
 
-            setFlattenedItems(flatten(updatedTree))
+            setFlattenedItems(updateFlattenedItems(updatedTree))
             onChange(updatedTree)
         }}
 
@@ -268,7 +315,10 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
                             updateAddSibling(item)
                         )
                     }}
-                    focused={index === focusedIndex} />
+                    focused={index === focusedIndex}
+                    onDelete={(item) => {
+                        setFlattenedItems(removeFlattenedItem(item))
+                    }} />
             })}
         </ul>
         <DragOverlay>
