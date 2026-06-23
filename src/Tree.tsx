@@ -13,73 +13,64 @@ export interface Props {
     onChange: (t: TaskItem[]) => void
 }
 
-type SetFlattenedItemsCallback = (flattenedTaskItems: FlattenedTaskItem[]) => FlattenedTaskItem[]
-
 export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.Element {
     const [flattenedItems, setFlattenedItems] = useState<FlattenedTaskItem[]>(() => flatten(items))
     const initialDepth = useRef<number>(0)
     const sourceChildren = useRef<FlattenedTaskItem[]>([])
     const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
 
-    const updateFocusedIndex = (newVal: number): ((existing: number | null) => number) => {
-        return (existing: number | null) => {
-            console.log(existing, newVal)
-            setFlattenedItems((flattenedItems) => {
-                if (existing !== null) {
-                    flattenedItems[existing].focused = false
-                }
-                flattenedItems[newVal].focused = true
-                return flattenedItems.map(n => structuredClone(n))
-            })
-            return newVal
+    const updateFocusedIndex = (newVal: number): void => {
+        if (focusedIndex !== null) {
+            flattenedItems[focusedIndex].focused = false
         }
+        flattenedItems[newVal].focused = true
+        setFlattenedItems(flattenedItems.map(n => structuredClone(n)))
+        setFocusedIndex(newVal)
     }
 
-    const updateAddItem = (item: FlattenedTaskItem, op: InsertOperation): SetFlattenedItemsCallback => {
-        return (flattenedItems) => {
-            op(flattenedItems, item, {
-                name: "",
-                editing: true,
-                focused: true,
-                checked: false,
-            })
+    const updateAddItem = (item: FlattenedTaskItem, op: InsertOperation): void => {
+        op(flattenedItems, item, {
+            name: "",
+            editing: true,
+            focused: true,
+            checked: false,
+        })
 
-            item.focused = false
+        item.focused = false
 
-            // use a tree sort and flatten to put the item in the correct spot.
-            const tree = TaskItem.fromFlattenedItem(flattenedItems)
-            onChange(tree)
-            const newFlattenedItems = flatten(tree)
-            let newFocusedIndex: number | null = newFlattenedItems.findIndex(i => i.focused)
-            newFocusedIndex = newFocusedIndex === -1 ? null : newFocusedIndex
-            setFocusedIndex(newFocusedIndex)
-            return newFlattenedItems
-        }
+        // use a tree sort and flatten to put the item in the correct spot.
+        const tree = TaskItem.fromFlattenedItem(flattenedItems)
+        onChange(tree)
+        const newFlattenedItems = flatten(tree)
+        let newFocusedIndex: number | null = newFlattenedItems.findIndex(i => i.focused)
+        newFocusedIndex = newFocusedIndex === -1 ? null : newFocusedIndex
+        setFocusedIndex(newFocusedIndex)
+        setFlattenedItems(newFlattenedItems)
     }
 
-    const updateAddSibling = (item: FlattenedTaskItem): SetFlattenedItemsCallback => {
-        return updateAddItem(item, insertSibling)
+    const updateAddSibling = (item: FlattenedTaskItem): void => {
+        updateAddItem(item, insertSibling)
     }
 
-    const updateAddChild = (item: FlattenedTaskItem): SetFlattenedItemsCallback => {
-        return updateAddItem(item, insertChild)
+    const updateAddChild = (item: FlattenedTaskItem): void => {
+        updateAddItem(item, insertChild)
     }
 
     useHotkeys('k', () => {
         if (focusedIndex === null) {
-            setFocusedIndex(updateFocusedIndex(0))
+            updateFocusedIndex(0)
             return
         }
 
-        setFocusedIndex((focusedIndex + 1) % flattenedItems.length)
+        updateFocusedIndex((focusedIndex + 1) % flattenedItems.length)
     })
 
     useHotkeys('j', () => {
         if (focusedIndex === null || focusedIndex === 0) {
-            setFocusedIndex(updateFocusedIndex(flattenedItems.length - 1))
+            updateFocusedIndex(flattenedItems.length - 1)
             return
         }
-        setFocusedIndex(updateFocusedIndex(focusedIndex - 1))
+        updateFocusedIndex(focusedIndex - 1)
     })
 
     useHotkeys('e', () => {
@@ -100,9 +91,8 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
             return
         }
         const sibling = flattenedItems[focusedIndex]
-        setFlattenedItems(
-            updateAddSibling(sibling)
-        )
+        updateAddSibling(sibling)
+
     }, { keydown: false, keyup: true })
 
     useHotkeys('o', () => {
@@ -110,9 +100,7 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
             return
         }
         const sibling = flattenedItems[focusedIndex]
-        setFlattenedItems(
-            updateAddChild(sibling)
-        )
+        updateAddChild(sibling)
     }, { keydown: false, keyup: true })
 
     useHotkeys('shift + delete', () => {
@@ -120,7 +108,7 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
             return
         }
         const targetItem = flattenedItems[focusedIndex]
-        setFlattenedItems(removeFlattenedItem(targetItem))
+        removeFlattenedItem(targetItem)
     })
 
     const onChecked = (item: FlattenedTaskItem, value: boolean): void => {
@@ -174,20 +162,15 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
     }
 
     const removeFlattenedItem = (item: FlattenedTaskItem) => {
-        return (flattenedItems: FlattenedTaskItem[]) => {
-            const tree = TaskItem.fromFlattenedItem(flattenedItems)
-            const root = new TaskItem()
-            root.children = tree
-            const target = root.find(t => t.id === item.id)
-            if (target === undefined) {
-                console.log(`unable to delete item ${item.id} / ${item.name} -- not found in tree`)
-                return flattenedItems
-            }
-
-            target.delete()
-
-            return flatten(root.children)
+        const remainingItems = flattenedItems.filter(n => n.id !== item.id)
+        const newTree = TaskItem.fromFlattenedItem(remainingItems)
+        let newFocusedIndex: number | null = remainingItems.findIndex(n => n.focused)
+        if (newFocusedIndex === -1) {
+            newFocusedIndex = null
         }
+        setFocusedIndex(newFocusedIndex)
+        onChange(newTree)
+        setFlattenedItems(flatten(newTree))
     }
 
 
@@ -307,17 +290,13 @@ export function Tree({ items, indentation = 50, onChange }: Props): React.JSX.El
                     onChecked={onChecked}
                     onEditStart={onEditStart} onEditFinish={onEditFinish} onEditCancel={onEditCancel}
                     onAddChild={(item) => {
-                        setFlattenedItems(
-                            updateAddChild(item)
-                        )
+                        updateAddChild(item)
                     }} onAddSibling={(item) => {
-                        setFlattenedItems(
-                            updateAddSibling(item)
-                        )
+                        updateAddSibling(item)
                     }}
                     focused={index === focusedIndex}
                     onDelete={(item) => {
-                        setFlattenedItems(removeFlattenedItem(item))
+                        removeFlattenedItem(item)
                     }} />
             })}
         </ul>

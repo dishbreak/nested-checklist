@@ -49,16 +49,22 @@ export class TaskItem {
             return i
         })
 
+        const orphaned = new Set<number>()
+
         f.forEach(n => {
             const i = nodeMap.get(n.id)!
             if (n.parentId !== undefined) {
                 i.parent = nodeMap.get(n.parentId)
+                if (i.parent === undefined) {
+                    orphaned.add(n.id)
+                    return
+                }
                 i.parent?.children.push(i)
             }
         })
 
         // return only the items with no parent.
-        return t.filter(n => n.parent === undefined)
+        return t.filter(n => n.parent === undefined && !orphaned.has(n.id))
     }
 
     clone(parent?: TaskItem): TaskItem {
